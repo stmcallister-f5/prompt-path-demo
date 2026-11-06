@@ -1,0 +1,9 @@
+{
+  "policy": {
+    "name": "booth_policy",
+    "template": {"name": "POLICY_TEMPLATE_NGINX_BASE"},
+    "applicationLanguage": "utf-8",
+    "enforcementMode": "blocking",
+    "general": {"allowedResponseCodes": [400, 401, 404, 407, 417, 429, 503]}
+  }
+}

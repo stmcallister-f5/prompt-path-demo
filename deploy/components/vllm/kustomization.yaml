@@ -1,0 +1,20 @@
+# Swap the deterministic mock model for a real model served by vLLM.
+# Add to any overlay:   components: [../../components/vllm]
+# Needs one NVIDIA GPU node. Behaviour of a real model is not deterministic:
+# rehearse the beats and keep the backup recordings handy.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources: [vllm.yaml]
+patches:
+  - target: {kind: Deployment, name: agent}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - {name: ROLE, value: agent}
+          - {name: COMPONENT, value: agent}
+          - {name: DISPLAY_NAME, value: Agent}
+          - {name: MODEL_URL, value: "http://vllm:8000"}
+          - {name: MODEL_DISPLAY, value: vLLM}
+          - {name: TOOLS_URL, value: "http://slot-tools:8080"}
+          - {name: UPSTREAM_TIMEOUT, value: "180"}

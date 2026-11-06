@@ -1,0 +1,9 @@
+deploy/components/f5-guardrails/guardrails.env
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# compiled WAF policy bundle (make waf-image)
+deploy/images/f5-waf/booth-policy.tgz
+.venv/
+.DS_Store

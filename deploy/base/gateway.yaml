@@ -1,0 +1,33 @@
+# Gateway API front door, implemented by NGINX Gateway Fabric (gatewayClassName: nginx).
+# NGF provisions an NGINX Deployment + Service for this Gateway (demo-nginx).
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: demo
+spec:
+  gatewayClassName: nginx
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: chat
+spec:
+  parentRefs: [{name: demo}]
+  hostnames: [api.demo.local]
+  rules:
+    - matches: [{path: {type: PathPrefix, value: /v1}}]
+      backendRefs: [{name: slot-waf, port: 8080}]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: board
+spec:
+  parentRefs: [{name: demo}]
+  hostnames: [board.demo.local]
+  rules:
+    - backendRefs: [{name: board, port: 8080}]

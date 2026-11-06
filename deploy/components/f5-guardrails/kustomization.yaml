@@ -1,0 +1,37 @@
+# Switch both guardrail hops to F5 AI Guardrails. Same hops, same board; the
+# scanning is delegated to the real service (guardrail.external_scan()).
+# Add to any overlay:   components: [../../components/f5-guardrails]
+#
+#   cp guardrails.env.example guardrails.env   # fill in (git-ignored)
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+# Fixed name: the envFrom refs below are added by patch, which kustomize does
+# not rewrite to the hashed name. After editing guardrails.env, run
+# `kubectl -n prompt-demo rollout restart deploy guard guard-tools`.
+secretGenerator:
+  - name: f5-ai-guardrails
+    envs: [guardrails.env]
+    options: {disableNameSuffixHash: true}
+patches:
+  - target: {kind: Deployment, name: guard}
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: GUARDRAIL_BACKEND, value: external}
+      - op: add
+        path: /spec/template/spec/containers/0/envFrom
+        value: [{secretRef: {name: f5-ai-guardrails}}]
+      - op: replace
+        path: /spec/template/spec/containers/0/env/2/value
+        value: F5 AI Guardrails
+  - target: {kind: Deployment, name: guard-tools}
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: {name: GUARDRAIL_BACKEND, value: external}
+      - op: add
+        path: /spec/template/spec/containers/0/envFrom
+        value: [{secretRef: {name: f5-ai-guardrails}}]
+      - op: replace
+        path: /spec/template/spec/containers/0/env/2/value
+        value: F5 AI Guardrails (tools)

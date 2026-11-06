@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm
+  labels: {app.kubernetes.io/component: vllm}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/component: vllm}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: vllm}
+    spec:
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:v0.8.5     # bump to the current release before the show
+          args:
+            - --model=Qwen/Qwen2.5-1.5B-Instruct
+            - --served-model-name=demo-model  # the AI gateway routes booth-assistant -> demo-model
+            - --enable-auto-tool-choice
+            - --tool-call-parser=hermes
+            - --max-model-len=8192
+          ports:
+            - {name: http, containerPort: 8000}
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+            periodSeconds: 5
+            failureThreshold: 120
+          resources:
+            limits: {nvidia.com/gpu: 1, memory: 16Gi}
+          volumeMounts:
+            - {name: cache, mountPath: /root/.cache/huggingface}
+            - {name: shm, mountPath: /dev/shm}
+      volumes:
+        - name: cache
+          emptyDir: {}
+        - name: shm
+          emptyDir: {medium: Memory, sizeLimit: 2Gi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm
+spec:
+  selector: {app.kubernetes.io/component: vllm}
+  ports:
+    - {name: http, port: 8000, targetPort: http}

@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: toggle-board
+---
+# Least privilege: read and patch Services (slot rewiring), read EndpointSlices
+# and Pods (to confirm a rewire landed). Extend only if you add manifest-type layers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: toggle-board
+rules:
+  - apiGroups: [""]
+    resources: [services]
+    verbs: [get, list, patch]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: toggle-board
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: toggle-board}
+subjects:
+  - {kind: ServiceAccount, name: toggle-board}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: board
+  labels: {app.kubernetes.io/component: board}
+spec:
+  replicas: 1          # keep at 1: the board serializes toggles in-process
+  selector:
+    matchLabels: {app.kubernetes.io/component: board}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: board}
+    spec:
+      serviceAccountName: toggle-board
+      containers:
+        - name: board
+          image: prompt-path-demo
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: ROLE, value: board}
+            - {name: BOARD_CONFIG, value: /config/config.yaml}
+            - {name: BOARD_SETTLE_SECONDS, value: "1.0"}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+          volumeMounts:
+            - {name: config, mountPath: /config}
+            - {name: tmp, mountPath: /tmp}     # kubernetes DynamicClient writes its discovery cache here
+          resources:
+            requests: {cpu: 20m, memory: 96Mi}
+            limits: {memory: 256Mi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+      volumes:
+        - name: config
+          configMap: {name: board-config}
+        - name: tmp
+          emptyDir: {sizeLimit: 16Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: board
+spec:
+  selector: {app.kubernetes.io/component: board}
+  ports:
+    - {name: http, port: 8080, targetPort: http}

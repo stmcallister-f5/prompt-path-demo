@@ -1,0 +1,15 @@
+# Mock stack with the real F5 AI Guardrails on both guardrail hops. WAF and AI
+# gateway stay mocks; use this until those entitlements are in place.
+#
+#   cp ../../components/f5-guardrails/guardrails.env.example \
+#      ../../components/f5-guardrails/guardrails.env        # fill in
+#   OVERLAY=deploy/overlays/f5-guardrails make deploy
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: prompt-demo
+resources: [../../base]
+components: [../../components/f5-guardrails]
+configMapGenerator:
+  - name: board-config
+    behavior: replace
+    files: [config.yaml=board-config.yaml]

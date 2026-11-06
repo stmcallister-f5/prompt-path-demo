@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toggle Board</title>
+<style>
+:root{
+  --bg:#000;--panel:#141414;--panel2:#1f1f1f;--line:#2e2e2e;--text:#fff;--muted:#a6a6a6;--dim:#6e6e6e;
+  --blue:#0E41AA;--blue-t:#6F9BF2;--purple:#933CCC;--purple-t:#C18BE8;--magenta:#AB2782;--magenta-t:#E07BC1;
+  --red:#E4002B;--red-t:#FF5A6E;--orange:#F29A36;--orange-t:#F7B866;--green:#009639;--green-t:#4CD07D;--gray:#595959;--gray-t:#bdbdbd;
+  --good:#4CD07D;--bad:#FF5A6E;
+  --font:"Inter","Segoe UI","Helvetica Neue",Arial,system-ui,sans-serif;--mono:"JetBrains Mono","SFMono-Regular",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;cursor:pointer}
+.brandbar{height:6px;display:grid;grid-template-columns:13.5fr 36fr 16.5fr 23fr 11fr}
+.brandbar i:nth-child(1){background:var(--orange)}.brandbar i:nth-child(2){background:var(--red)}
+.brandbar i:nth-child(3){background:var(--magenta)}.brandbar i:nth-child(4){background:var(--blue)}.brandbar i:nth-child(5){background:var(--purple)}
+header{display:flex;align-items:center;gap:20px;padding:18px 32px 10px}
+header h1{font-size:28px;font-weight:800;letter-spacing:-.02em;margin:0}
+header h1 span{color:var(--muted);font-weight:500}
+.spacer{flex:1}
+.pill{font-size:14px;color:var(--muted);border:1px solid var(--line);padding:6px 12px;border-radius:999px;display:flex;gap:8px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--good)}
+.dot.bad{background:var(--bad)}
+.ghost{background:var(--panel2);border:1px solid var(--line);padding:8px 14px;border-radius:8px;font-size:14px}
+.ghost:hover{border-color:#555}
+main{flex:1;display:grid;grid-template-columns:360px minmax(0,1fr) 470px;gap:20px;padding:10px 32px 16px}
+section.card{background:var(--panel);border-radius:4px;padding:20px}
+h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;font-weight:700}
+kbd{font-family:var(--mono);font-size:12px;color:var(--muted);border:1px solid #444;border-bottom-width:2px;border-radius:5px;padding:1px 6px}
+
+/* toggles */
+.layers{display:flex;flex-direction:column;gap:12px}
+.layer{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:16px;border-radius:4px;background:var(--panel2);border:1px solid transparent;transition:background .25s,border-color .25s}
+.layer.on{background:color-mix(in srgb,var(--c) 28%,#000);border-color:var(--c)}
+.layer .ic{width:14px;height:14px;border-radius:50%;background:var(--c);box-shadow:0 0 14px var(--c)}
+.layer .name{font-size:21px;font-weight:700;line-height:1.15}
+.layer .sub{font-size:14px;color:var(--muted);margin-top:4px}
+.switch{position:relative;width:78px;height:40px;border-radius:999px;background:#3a3a3a;border:0;transition:background .25s;flex:none}
+.switch::after{content:"";position:absolute;top:5px;left:5px;width:30px;height:30px;border-radius:50%;background:#9a9a9a;transition:left .25s,background .25s}
+.layer.on .switch{background:var(--c)}
+.layer.on .switch::after{left:43px;background:#fff}
+.layer.busy .switch::after{animation:pulse .8s infinite alternate}
+@keyframes pulse{to{opacity:.3}}
+.state{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--muted);margin-top:6px}
+.layer.on .state{color:#fff}
+.presets{display:flex;gap:10px;margin-top:14px}
+
+/* pipeline */
+.pipe{display:flex;align-items:stretch;gap:0;margin-bottom:8px}
+.hop{flex:1;min-width:0;position:relative;padding:16px 8px 12px;min-height:118px;display:flex;flex-direction:column;justify-content:flex-start;border-radius:4px;background:var(--panel2);border:2px solid var(--line);transition:all .3s;text-align:center}
+.hop .lab{font-size:18px;font-weight:700;line-height:1.15;overflow-wrap:break-word;hyphens:auto}
+.hop .sl{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.2;min-height:15px}
+.hop .st{font-size:12px;font-weight:800;letter-spacing:.06em;margin-top:auto;padding-top:8px;color:var(--muted);min-height:15px;line-height:1.3}
+.hop .bar{position:absolute;left:0;right:0;top:0;height:4px;background:var(--c);border-radius:2px 2px 0 0;opacity:.9}
+.hop.off{opacity:.38;border-style:dashed;background:transparent}
+.hop.off .bar{display:none}
+.hop.s-pass{border-color:#cfcfcf}
+.hop.s-pass .st{color:#fff}
+.hop.s-block{border-color:var(--good);background:color-mix(in srgb,var(--green) 35%,#000)}
+.hop.s-block .st{color:var(--good)}
+.hop.s-unreached{opacity:.32}
+.hop.s-hit{border-color:var(--bad);background:color-mix(in srgb,var(--red) 30%,#000)}
+.hop.s-hit .st{color:var(--bad)}
+.arrow{flex:0 0 20px;display:flex;align-items:center;justify-content:center;color:#666;font-size:20px}
+.arrow.lit{color:#fff}
+.branch{display:flex;gap:0;margin-left:auto;width:62%;align-items:stretch}
+.branchlabel{font-size:12px;color:var(--muted);text-align:right;margin:8px 0 6px;letter-spacing:.08em;text-transform:uppercase}
+.internet{flex:0 0 64px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font-size:13px;gap:4px}
+.internet b{font-size:26px;color:#fff}
+
+/* scenarios */
+.scen{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:22px}
+.sbtn{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:14px 12px;text-align:left;transition:border-color .2s,transform .1s}
+.sbtn:hover{border-color:#666}.sbtn:active{transform:scale(.98)}
+.sbtn.active{border-color:#fff}
+.sbtn .t{font-size:17px;font-weight:700;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.sbtn .d{font-size:13px;color:var(--muted);margin-top:5px}
+.custom{display:flex;gap:10px;margin-top:12px}
+.custom input{flex:1;background:#0b0b0b;border:1px solid var(--line);color:#fff;border-radius:4px;padding:14px 16px;font-size:17px;font-family:var(--font)}
+.custom input:focus{outline:none;border-color:var(--magenta-t)}
+.go{background:var(--red);border:0;border-radius:4px;padding:0 22px;font-weight:800;font-size:16px}
+.promptline{margin-top:16px;font-size:15px;color:var(--muted);min-height:20px}
+.promptline q{color:#fff;font-style:italic}
+
+/* result */
+.outcome{font-size:84px;font-weight:900;letter-spacing:-.03em;line-height:1;margin:4px 0 10px;color:var(--dim);white-space:nowrap}
+.outcome.good{color:var(--good)}.outcome.bad{color:var(--bad)}.outcome.warn{color:var(--orange-t)}.outcome.neutral{color:#e6e6e6}
+.why{font-size:19px;font-weight:600;min-height:26px}
+.why .by{color:#fff}
+.meta{font-size:14px;color:var(--muted);margin-top:6px;font-family:var(--mono);min-height:18px;word-break:break-word}
+.reply{margin-top:16px;background:#0b0b0b;border:1px solid var(--line);border-radius:4px;padding:14px 16px;font-size:16px;line-height:1.45;min-height:84px;max-height:180px;overflow:auto}
+.reply.leak{border-color:var(--red)}
+.reply mark{background:transparent;color:var(--bad);font-weight:800}
+.steps{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.step{font-family:var(--mono);font-size:14px;display:flex;gap:10px;align-items:baseline}
+.step .k{font-weight:700;min-width:84px}
+.step.ok .k{color:var(--orange-t)}.step.blocked .k{color:var(--good)}
+.timing{margin-top:14px;display:grid;grid-template-columns:1fr auto;gap:4px 14px;font-size:14px;font-family:var(--mono)}
+.timing .h{color:var(--muted)}
+.empty{color:var(--dim)}
+
+/* bottom */
+footer{display:grid;grid-template-columns:minmax(0,1fr) 470px;gap:20px;padding:0 32px 22px}
+.log{font-family:var(--mono);font-size:13px;color:var(--muted);line-height:18px;height:102px;overflow:hidden;display:flex;flex-direction:column;gap:3px}
+.log .change{color:#e6e6e6}
+.log .t{color:var(--dim);margin-right:10px}
+.hist{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:13px;line-height:18px;height:102px;overflow:hidden}
+.hist .row{display:grid;grid-template-columns:150px 110px 1fr 64px;gap:8px;color:var(--muted)}
+.hist .row b{font-weight:700}
+.hist .good{color:var(--good)}.hist .bad{color:var(--bad)}
+.lights{display:flex;gap:3px}.lights i{width:10px;height:10px;border-radius:2px;background:#333}
+.lights i.on{background:var(--c)}
+.err{color:var(--bad);font-size:14px;font-family:var(--mono);padding:8px 32px}
+@media (max-width:1500px){main{grid-template-columns:300px minmax(0,1fr)}#result{grid-column:2}.outcome{font-size:72px}footer{grid-template-columns:1fr 1fr}.hop .lab{font-size:16px}}
+@media (max-width:1100px){main{grid-template-columns:1fr}.pipe{flex-wrap:wrap}.branch{width:100%}}
+</style>
+</head>
+<body>
+<div class="brandbar"><i></i><i></i><i></i><i></i><i></i></div>
+<header>
+  <h1 id="title">The Prompt Got Past Your WAF <span>· toggle board</span></h1>
+  <div class="spacer"></div>
+  <div class="pill" id="driver"><span class="dot"></span><span>connecting…</span></div>
+</header>
+<div class="err" id="err" hidden></div>
+<main>
+  <section class="card">
+    <h2>Layers <kbd>1</kbd> to <kbd>4</kbd></h2>
+    <div class="layers" id="layers"></div>
+    <div class="presets">
+      <button class="ghost" data-preset="all-off">All off <kbd>0</kbd></button>
+      <button class="ghost" data-preset="all-on">All on <kbd>9</kbd></button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Request path</h2>
+    <div class="pipe" id="pipe"></div>
+    <div class="branchlabel">Agent tool calls ↓</div>
+    <div class="branch" id="branch"></div>
+
+    <div class="scen" id="scen"></div>
+    <div class="custom">
+      <input id="custom" placeholder="Beat the guardrail: type your own prompt and press Enter  ( / to focus )" autocomplete="off">
+      <button class="go" id="send">Send</button>
+    </div>
+    <div class="promptline" id="promptline"></div>
+  </section>
+
+  <section class="card" id="result">
+    <h2>Result</h2>
+    <div class="outcome" id="outcome">READY</div>
+    <div class="why" id="why"><span class="empty">Pick a scenario to send one request through the stack.</span></div>
+    <div class="meta" id="meta"></div>
+    <div class="reply" id="reply"><span class="empty">Model reply appears here.</span></div>
+    <div class="steps" id="steps"></div>
+    <div class="timing" id="timing"></div>
+  </section>
+</main>
+<footer>
+  <section class="card"><h2>Cluster changes</h2><div class="log" id="log"></div></section>
+  <section class="card"><h2>Recent runs</h2><div class="hist" id="hist"></div></section>
+</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const COLORS = {blue:"var(--blue-t)",purple:"var(--purple-t)",magenta:"var(--magenta-t)",green:"var(--green-t)",orange:"var(--orange-t)",gray:"var(--gray-t)",red:"var(--red-t)"};
+const BASE = {blue:"var(--blue)",purple:"var(--purple)",magenta:"var(--magenta)",green:"var(--green)",orange:"var(--orange)",gray:"var(--gray)",red:"var(--red)"};
+let S = null, busy = new Set(), running = false, last = null;
+
+async function api(path, opts={}) {
+  const r = await fetch(path, {headers:{"content-type":"application/json"}, ...opts});
+  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+  return r.json();
+}
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtTime = t => new Date(t*1000).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+function showErr(m){ const e=$("#err"); e.hidden=!m; e.textContent=m||""; }
+
+async function refresh() {
+  try { S = await api("/api/state"); showErr(S.healthy ? "" : "Cluster: " + S.error); }
+  catch (e) { showErr("Board API unreachable: " + e.message); return; }
+  render();
+}
+
+function layerOn(id){ const l = S.layers.find(x => x.id === id); return l ? l.on : true; }
+
+function render() {
+  $("#driver").innerHTML = `<span class="dot ${S.healthy?"":"bad"}"></span><span>${esc(S.driver)}</span>`;
+  // toggles
+  $("#layers").innerHTML = S.layers.map(l => `
+    <div class="layer ${l.on?"on":""} ${busy.has(l.id)?"busy":""}" style="--c:${BASE[l.color]||BASE.gray}" data-layer="${l.id}">
+      <span class="ic" style="--c:${COLORS[l.color]||COLORS.gray}"></span>
+      <div><div class="name">${esc(l.label)}</div><div class="sub">${esc(l.sublabel||"")}</div>
+        <div class="state">${busy.has(l.id)?"REWIRING…":(l.on?"ON":"OFF")} &nbsp;<kbd>${esc(l.key||"")}</kbd></div></div>
+      <button class="switch" aria-label="toggle ${esc(l.label)}"></button>
+    </div>`).join("");
+  // scenarios
+  $("#scen").innerHTML = S.scenarios.map(s => `
+    <button class="sbtn ${last&&last.scenario===s.id?"active":""}" data-scen="${s.id}">
+      <div class="t">${esc(s.label)} <kbd>${esc((s.key||"").toUpperCase())}</kbd></div>
+      <div class="d">${esc(s.door||"")}</div></button>`).join("");
+  renderPipe();
+  // log + history
+  $("#log").innerHTML = S.events.slice(0,5).map(e => `<div class="${e.kind}"><span class="t">${fmtTime(e.at)}</span>${esc(e.msg)}</div>`).join("") || `<div class="empty">Toggle a layer to see the change land in the cluster.</div>`;
+  $("#hist").innerHTML = S.history.slice(0,5).map(h => `<div class="row"><span>${esc(h.label)}</span><b class="${h.tone}">${esc(h.outcome)}</b>
+     <span class="lights">${S.layers.map(l=>`<i class="${h.layers[l.id]?"on":""}" style="--c:${COLORS[l.color]}"></i>`).join("")}</span><span>${h.total_ms} ms</span></div>`).join("") || `<div class="empty">No runs yet.</div>`;
+}
+
+function hopStatus(h, trace, result) {
+  if (h.layer && !layerOn(h.layer)) return {cls:"off", st:"BYPASSED"};
+  if (!result) return {cls:"", st: h.layer ? "ON" : ""};
+  const rec = trace.find(t => t.hop === h.hop);
+  if (rec) {
+    if (rec.verdict === "block") return {cls:"s-block", st:"STOPPED IT", ms:rec.ms};
+    if (rec.verdict === "error") return {cls:"s-hit", st:"ERROR"};
+    const hit = (h.hop === "model" && result.outcome === "LEAKED") || (h.hop === "tools" && result.outcome === "EXFILTRATED");
+    return {cls: hit ? "s-hit" : "s-pass", st: hit ? (result.outcome === "LEAKED" ? "LEAKED" : "ACTED ON IT") : "LET IT THROUGH", ms:rec.ms};
+  }
+  return null;
+}
+
+function renderPipe() {
+  const r = last, trace = r ? r.trace : [];
+  const toolTrace = r ? (r.steps||[]).flatMap(s => s.trace||[]) : [];
+  const blockedIdx = (() => { if (!r) return -1; return S.pipeline.findIndex(h => trace.some(t => t.hop===h.hop && t.verdict==="block")); })();
+  const anyLater = i => S.pipeline.slice(i+1).some(h => trace.some(t => t.hop === h.hop));
+  const chip = (h, st) => `<div class="hop ${st.cls}" style="--c:${COLORS[h.color]||COLORS.gray}"><div class="bar"></div>
+      <div class="lab">${esc(h.label)}</div><div class="sl">${esc(h.sublabel||"")}</div>
+      <div class="st">${st.st}${st.ms!=null?` · ${st.ms} ms`:""}</div></div>`;
+  const inbound = S.pipeline.map((h, i) => {
+    let st = hopStatus(h, trace, r);
+    if (!st) {
+      if (h.fixed && (anyLater(i) || (blockedIdx > i))) st = {cls:"s-pass", st:"LET IT THROUGH"};
+      else if (r && r.status === 0) st = {cls:"s-unreached", st:"NO RESPONSE"};
+      else if (r && h.layer && r.hop === h.layer) st = {cls:"s-block", st:"STOPPED IT"};
+      else if (r) st = {cls:"s-unreached", st:"NOT REACHED"};
+      else st = {cls:"", st:""};
+    }
+    const lit = r && (st.cls === "s-pass" || st.cls === "off") ? "lit" : "";
+    return `${i ? `<div class="arrow ${lit}">→</div>` : `<div class="internet"><b>⇢</b>internet</div>`}${chip(h, st)}`;
+  }).join("");
+  $("#pipe").innerHTML = inbound;
+  const usedTools = r && (r.steps||[]).length;
+  $("#branch").innerHTML = (S.toolPipeline||[]).map((h, i) => {
+    let st = hopStatus(h, toolTrace, usedTools ? r : null) || (usedTools ? {cls:"s-unreached", st:"NOT REACHED"} : {cls:"", st: h.layer ? (layerOn(h.layer)?"ON":"") : ""});
+    if (h.layer && !layerOn(h.layer)) st = {cls:"off", st:"BYPASSED"};
+    return `${i ? `<div class="arrow">→</div>` : ""}${chip(h, st)}`;
+  }).join("");
+}
+
+function renderResult(r) {
+  const o = $("#outcome"); o.textContent = r.outcome; o.className = "outcome " + r.tone; fitOutcome();
+  const by = r.by ? ` by <span class="by">${esc(r.by)}</span>` : "";
+  const dir = r.direction ? ` · on the ${esc(r.direction)}` : "";
+  $("#why").innerHTML = `${esc(r.label)}${by}${dir}`;
+  $("#meta").textContent = [r.reason, r.detail].filter(Boolean).join(" · ") + `  ·  ${r.total_ms} ms end to end`;
+  const rep = $("#reply");
+  let html = r.reply ? esc(r.reply) : `<span class="empty">${r.status >= 400 ? "No reply: the request never reached the model." : "No reply."}</span>`;
+  (S.canaries||[]).forEach(c => html = html.split(esc(c)).join(`<mark>${esc(c)}</mark>`));
+  rep.innerHTML = html; rep.className = "reply" + (r.outcome === "LEAKED" ? " leak" : "");
+  $("#steps").innerHTML = (r.steps||[]).map(s => `<div class="step ${s.status}"><span class="k">${s.status==="ok"?"ran":esc(s.status)}</span>
+     <span>${esc(s.name)}(${esc(Object.values(s.args||{})[0]||"")})</span></div>`).join("");
+  const rows = (r.trace||[]).concat((r.steps||[]).flatMap(s => s.trace||[]));
+  $("#timing").innerHTML = rows.length ? `<span class="h">hop</span><span class="h">ms</span>` + rows.map(t => `<span>${esc(t.name)}${t.hop==="tools"&&t.detail?` (${esc(t.detail)})`:""}${t.verdict==="block"?" ⛔":""}</span><span>${t.ms}</span>`).join("") : "";
+  $("#promptline").innerHTML = `Sent: <q>${esc(r.prompt.length > 160 ? r.prompt.slice(0,160)+"…" : r.prompt)}</q>`;
+}
+
+function fitOutcome(){ const o=$("#outcome"); o.style.fontSize=""; let fs=parseFloat(getComputedStyle(o).fontSize); while(o.scrollWidth>o.clientWidth && fs>36){ fs-=4; o.style.fontSize=fs+"px"; } }
+window.addEventListener("resize", fitOutcome);
+
+async function toggle(id) {
+  if (busy.has(id)) return;
+  const l = S.layers.find(x => x.id === id); if (!l) return;
+  busy.add(id); render();
+  try { await api(`/api/layers/${id}`, {method:"POST", body: JSON.stringify({on: !l.on})}); last = null; }
+  catch (e) { showErr("Toggle failed: " + e.message); }
+  busy.delete(id); await refresh();
+}
+
+async function preset(name) {
+  S.layers.forEach(l => busy.add(l.id)); render();
+  try { await api(`/api/preset/${name}`, {method:"POST"}); last = null; } catch (e) { showErr("Preset failed: " + e.message); }
+  busy.clear(); await refresh();
+}
+
+async function run(scenario, prompt) {
+  if (running) return; running = true;
+  $("#outcome").textContent = "SENDING…"; $("#outcome").className = "outcome";
+  try {
+    const body = {scenario}; if (prompt != null) body.prompt = prompt;
+    last = await api("/api/run", {method:"POST", body: JSON.stringify(body)});
+    renderResult(last);
+  } catch (e) { showErr("Run failed: " + e.message); $("#outcome").textContent = "ERROR"; }
+  running = false; await refresh();
+}
+
+document.addEventListener("click", e => {
+  const lay = e.target.closest("[data-layer]"); if (lay) return toggle(lay.dataset.layer);
+  const sc = e.target.closest("[data-scen]"); if (sc) return run(sc.dataset.scen);
+  const p = e.target.closest("[data-preset]"); if (p) return preset(p.dataset.preset);
+});
+$("#send").onclick = () => { const v = $("#custom").value.trim(); if (v) run("custom", v); };
+$("#custom").addEventListener("keydown", e => {
+  if (e.key === "Enter") { const v = e.target.value.trim(); if (v) run("custom", v); }
+  if (e.key === "Escape") e.target.blur();
+});
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.metaKey || e.ctrlKey || e.altKey || !S) return;
+  const k = e.key.toLowerCase();
+  if (k === "/") { e.preventDefault(); $("#custom").focus(); return; }
+  if (k === "0") return preset("all-off");
+  if (k === "9") return preset("all-on");
+  const l = S.layers.find(x => (x.key||"") === k); if (l) return toggle(l.id);
+  const s = S.scenarios.find(x => (x.key||"").toLowerCase() === k); if (s) return run(s.id);
+});
+
+refresh();
+setInterval(() => { if (!busy.size && !running) refresh(); }, 3000);
+</script>
+</body>
+</html>

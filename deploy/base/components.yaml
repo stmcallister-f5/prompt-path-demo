@@ -1,0 +1,347 @@
+# Generated layout: one Deployment + Service per hop. All run the same image; ROLE picks the behaviour.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waf
+  labels: {app.kubernetes.io/component: waf}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/component: waf}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: waf}
+    spec:
+      containers:
+        - name: waf
+          image: prompt-path-demo
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ROLE
+              value: "waf"
+            - name: COMPONENT
+              value: "waf"
+            - name: DISPLAY_NAME
+              value: "Edge WAF"
+            - name: UPSTREAM
+              value: "http://slot-aigw:8080"
+          ports:
+            - {name: hop, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: hop}
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 256Mi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: waf
+spec:
+  selector: {app.kubernetes.io/component: waf}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aigw
+  labels: {app.kubernetes.io/component: aigw}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/component: aigw}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: aigw}
+    spec:
+      containers:
+        - name: aigw
+          image: prompt-path-demo
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ROLE
+              value: "aigw"
+            - name: COMPONENT
+              value: "aigw"
+            - name: DISPLAY_NAME
+              value: "AI gateway"
+            - name: UPSTREAM
+              value: "http://slot-guard:8080"
+          ports:
+            - {name: hop, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: hop}
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 256Mi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aigw
+spec:
+  selector: {app.kubernetes.io/component: aigw}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guard
+  labels: {app.kubernetes.io/component: guard}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/component: guard}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: guard}
+    spec:
+      containers:
+        - name: guard
+          image: prompt-path-demo
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ROLE
+              value: "guardrail"
+            - name: COMPONENT
+              value: "guard"
+            - name: DISPLAY_NAME
+              value: "Guardrail"
+            - name: UPSTREAM
+              value: "http://agent:8080"
+            - name: GUARDRAIL_MODE
+              value: "inbound"
+          ports:
+            - {name: hop, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: hop}
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 256Mi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guard
+spec:
+  selector: {app.kubernetes.io/component: guard}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent
+  labels: {app.kubernetes.io/component: agent}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/component: agent}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: agent}
+    spec:
+      containers:
+        - name: agent
+          image: prompt-path-demo
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ROLE
+              value: "agent"
+            - name: COMPONENT
+              value: "agent"
+            - name: DISPLAY_NAME
+              value: "Agent"
+            - name: MODEL_URL
+              value: "http://model:8080"
+            - name: TOOLS_URL
+              value: "http://slot-tools:8080"
+            - name: MODEL_DISPLAY
+              value: "Model"
+          ports:
+            - {name: hop, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: hop}
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 256Mi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent
+spec:
+  selector: {app.kubernetes.io/component: agent}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model
+  labels: {app.kubernetes.io/component: model}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/component: model}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: model}
+    spec:
+      containers:
+        - name: model
+          image: prompt-path-demo
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ROLE
+              value: "model"
+            - name: COMPONENT
+              value: "model"
+            - name: DISPLAY_NAME
+              value: "Model"
+          ports:
+            - {name: hop, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: hop}
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 256Mi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: model
+spec:
+  selector: {app.kubernetes.io/component: model}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guard-tools
+  labels: {app.kubernetes.io/component: guard-tools}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/component: guard-tools}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: guard-tools}
+    spec:
+      containers:
+        - name: guard-tools
+          image: prompt-path-demo
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ROLE
+              value: "guardrail"
+            - name: COMPONENT
+              value: "guard-tools"
+            - name: DISPLAY_NAME
+              value: "Guardrail (tools)"
+            - name: UPSTREAM
+              value: "http://tools:8080"
+            - name: GUARDRAIL_MODE
+              value: "tools"
+          ports:
+            - {name: hop, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: hop}
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 256Mi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guard-tools
+spec:
+  selector: {app.kubernetes.io/component: guard-tools}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tools
+  labels: {app.kubernetes.io/component: tools}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/component: tools}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/component: tools}
+    spec:
+      containers:
+        - name: tools
+          image: prompt-path-demo
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ROLE
+              value: "tools"
+            - name: COMPONENT
+              value: "tools"
+            - name: DISPLAY_NAME
+              value: "Tool server"
+          ports:
+            - {name: hop, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /healthz, port: hop}
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 256Mi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tools
+spec:
+  selector: {app.kubernetes.io/component: tools}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}

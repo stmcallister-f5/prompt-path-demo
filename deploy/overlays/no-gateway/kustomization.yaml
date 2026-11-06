@@ -1,0 +1,25 @@
+# Fallback for clusters without NGINX Gateway Fabric: the board talks to the
+# first slot directly. Same demo, minus the Gateway API hop.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources: [../../base]
+configMapGenerator:
+  - name: board-config
+    behavior: replace
+    files: [config.yaml=board-config.yaml]
+patches:
+  - patch: |-
+      $patch: delete
+      apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      metadata: {name: demo}
+  - patch: |-
+      $patch: delete
+      apiVersion: gateway.networking.k8s.io/v1
+      kind: HTTPRoute
+      metadata: {name: chat}
+  - patch: |-
+      $patch: delete
+      apiVersion: gateway.networking.k8s.io/v1
+      kind: HTTPRoute
+      metadata: {name: board}

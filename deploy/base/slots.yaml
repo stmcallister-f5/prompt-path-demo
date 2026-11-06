@@ -1,0 +1,49 @@
+# Slot Services: stable names each hop forwards to. Watch them flip during the demo:
+#   kubectl -n prompt-demo get svc -l demo/slot=true -o wide -w
+apiVersion: v1
+kind: Service
+metadata:
+  name: slot-waf
+  annotations:
+    demo/purpose: "First hop behind the Gateway. The toggle board rewrites spec.selector to skip layers that are off."
+  labels: {app.kubernetes.io/part-of: prompt-path-demo, demo/slot: "true"}
+spec:
+  selector: {app.kubernetes.io/component: waf}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slot-aigw
+  annotations:
+    demo/purpose: "Fronts the AI gateway position. The toggle board rewrites spec.selector to skip layers that are off."
+  labels: {app.kubernetes.io/part-of: prompt-path-demo, demo/slot: "true"}
+spec:
+  selector: {app.kubernetes.io/component: aigw}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slot-guard
+  annotations:
+    demo/purpose: "Fronts the inbound guardrail position. The toggle board rewrites spec.selector to skip layers that are off."
+  labels: {app.kubernetes.io/part-of: prompt-path-demo, demo/slot: "true"}
+spec:
+  selector: {app.kubernetes.io/component: guard}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slot-tools
+  annotations:
+    demo/purpose: "Fronts the agent's tool calls. The toggle board rewrites spec.selector to skip layers that are off."
+  labels: {app.kubernetes.io/part-of: prompt-path-demo, demo/slot: "true"}
+spec:
+  selector: {app.kubernetes.io/component: guard-tools}
+  ports:
+    - {name: http, port: 8080, targetPort: hop}

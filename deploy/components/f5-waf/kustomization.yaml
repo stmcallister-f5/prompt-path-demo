@@ -1,0 +1,21 @@
+# Put F5 WAF for NGINX in the WAF slot: the slot selects the waf relay, the
+# relay forwards to the f5-waf pod, and NGINX forwards on to slot-aigw.
+# Add to any overlay:   components: [../../components/f5-waf]
+#
+# Before deploying (see docs/f5-overlay-setup.md, section 1):
+#   make waf-image waf-load
+#   kubectl -n prompt-demo create secret generic nginx-license --from-file=license.jwt=<your .jwt>
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources: [f5-waf.yaml]
+patches:
+  - target: {kind: Deployment, name: waf}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - {name: ROLE, value: relay}
+          - {name: COMPONENT, value: waf}
+          - {name: DISPLAY_NAME, value: F5 WAF for NGINX}
+          - {name: UPSTREAM, value: "http://f5-waf:8080"}
+          - {name: RELAY_BLOCK_PATTERN, value: support ID}   # WAF block page is a 200

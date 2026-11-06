@@ -1,0 +1,17 @@
+# Booth stack without an F5 AI Gateway: real F5 WAF for NGINX, real F5 AI
+# Guardrails on both guardrail hops, and the mock AI gateway in between.
+#
+#   make waf-image waf-load                 # build + load the WAF images (amd64)
+#   kubectl -n prompt-demo create secret generic nginx-license --from-file=license.jwt=<your .jwt>
+#   OVERLAY=deploy/overlays/f5-waf-guardrails make deploy
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: prompt-demo
+resources: [../../base]
+components:
+  - ../../components/f5-waf
+  - ../../components/f5-guardrails
+configMapGenerator:
+  - name: board-config
+    behavior: replace
+    files: [config.yaml=board-config.yaml]
