@@ -116,6 +116,7 @@ Then press `0` and `Q` for the hook.
 ### Steps
 
 Keyboard: **1 to 4** toggle layers · **Q W E R T** fire scenarios · **/** type your own prompt · **0** all off · **9** all on.
+What each key does is in [Keyboard reference](#keyboard-reference) below.
 
 | Slide | Do this | Board shows |
 |---|---|---|
@@ -132,6 +133,43 @@ Run `make reset` (or press `0`) before each session.
 
 If anyone asks about the AI gateway: it's about 60 lines of Python (`app/demo/aigw.py`) doing API keys,
 token limits and model routing, the same kinds of checks a real AI gateway does.
+
+### Keyboard reference
+
+The keys are the same in every overlay; layer names vary (the F5 stack says "F5 WAF for NGINX" where the
+mock stack says "Edge WAF"). Keys, labels and scenario prompts are set in `board-config.yaml`, so update
+this section if you change them there.
+
+**Layer toggles.** Each press changes the cluster: turning a layer off points its slot Service at the
+next layer that's still on, so traffic skips it.
+
+| Key | Layer | What it does when on |
+|---|---|---|
+| `1` | WAF | Attack signatures and protocol checks at the edge |
+| `2` | AI gateway | Checks the API key, enforces token limits, routes the model name |
+| `3` | Guardrail: prompts | Scans the prompt on the way in and the model's reply on the way out |
+| `4` | Guardrail: tool results | Scans what a tool hands back (such as a fetched web page) before the agent reads it |
+
+**Scenarios.** Each sends one request through the stack.
+
+| Key | Scenario | What it sends | What it shows |
+|---|---|---|---|
+| `Q` | Direct injection | A prompt telling the agent to ignore its instructions and print its system prompt | The main attack. Only the prompt guardrail (`3`) stops it; otherwise the secret `STAFF-40` leaks. |
+| `W` | SQL injection | An order lookup with `' OR 1=1; DROP TABLE users; --` in it | A classic web attack. The WAF (`1`) blocks it: what WAFs are good at. |
+| `E` | No API key | A harmless question with no API key | The AI gateway (`2`) rejects it (401). |
+| `R` | Token flood | "Summarize this: " repeated 2,200 times | Runaway spend. The AI gateway (`2`) throttles it (429). |
+| `T` | Indirect via tool | A harmless request to summarize a vendor's setup guide | The twist. Every inbound layer lets it through, but the fetched page hides an instruction and the agent emails the customer list. Only the tool-result guardrail (`4`) stops it. |
+
+**Presets and input.**
+
+| Key | Does |
+|---|---|
+| `0` | Every layer off: the starting state for each session (same as `make reset`) |
+| `9` | Every layer on |
+| `/` | Focus the text box to type your own prompt; Enter sends, Esc leaves the box |
+
+Keys are ignored while you type in the text box, or while Cmd, Ctrl or Alt is held, so browser shortcuts
+still work.
 
 ## The F5 booth stack
 
