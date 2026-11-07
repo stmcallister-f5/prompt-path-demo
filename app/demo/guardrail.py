@@ -41,6 +41,9 @@ INJECTION = [
         r"\b(you are now|from now on you|act as (an? )?(unrestricted|unfiltered|dan)|developer mode|jailbreak|do anything now)\b")),
     ("agent_directed_instruction", re.compile(
         r"\b(ai|assistant|agent|llm|model)( agent)?\s*:\s*(ignore|email|send|forward|delete|run|execute|call)\b|note to the (ai|assistant|agent)")),
+    ("instructions_to_ai", re.compile(
+        r"\b(notice|note|message|instructions?|attention) (for|to) (all )?(ai|llm)? ?(assistants?|agents?|models?)\b"
+        r"|\bdo not (mention|tell|reveal|disclose) (this|these|it)\b.{0,30}\b(user|customer)")),
     ("data_exfiltration", re.compile(
         r"\b(email|send|forward|post|upload|exfiltrate)\b.{0,50}\b(customer (list|data|records)|credentials|api keys?|passwords?|database)")),
 ]

@@ -64,7 +64,7 @@ pipeline:
   - {hop: model, label: Model, sublabel: OpenAI-compatible, fixed: true, color: gray}
 toolPipeline:
   - {hop: guard-tools, label: F5 AI Guardrails, sublabel: tool results, layer: guard-tools, color: magenta}
-  - {hop: tools, label: Tools, sublabel: fetch_url · send_email, fixed: true, color: orange}
+  - {hop: tools, label: Tools, sublabel: fetch_url · lookup_customers · send_email, fixed: true, color: orange}
 
 scenarios:
   - id: direct

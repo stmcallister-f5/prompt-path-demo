@@ -1,0 +1,19 @@
+# Booth stack with a real model: F5 WAF for NGINX, F5 AI Guardrails, and
+# Qwen 3 8B running locally on Ollama. The AI gateway stays the mock.
+# Fallback if the model misbehaves: OVERLAY=deploy/overlays/f5-waf-guardrails make deploy
+#
+#   ollama pull qwen3:8b && ollama serve      # or run the Ollama app
+#   make waf-image waf-load                   # see f5-waf-guardrails for WAF setup
+#   OVERLAY=deploy/overlays/f5-ollama make deploy
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: prompt-demo
+resources: [../../base]
+components:
+  - ../../components/f5-waf
+  - ../../components/f5-guardrails
+  - ../../components/ollama
+configMapGenerator:
+  - name: board-config
+    behavior: replace
+    files: [config.yaml=board-config.yaml]

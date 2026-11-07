@@ -61,7 +61,7 @@ ngf:            ## Install Gateway API CRDs and NGINX Gateway Fabric
 	helm upgrade --install ngf oci://ghcr.io/nginx/charts/nginx-gateway-fabric --version $(NGF_VERSION:v%=%) \
 	  --create-namespace -n nginx-gateway --wait
 
-deploy:         ## Apply the stack (OVERLAY=deploy/overlays/f5-waf-guardrails for the F5 booth stack)
+deploy:         ## Apply the stack (OVERLAY=deploy/overlays/f5-ollama for the F5 booth stack with a real model)
 	kubectl apply -k $(OVERLAY)
 	kubectl -n $(NS) rollout status deploy --timeout=180s
 

@@ -1,0 +1,29 @@
+# Point the agent at a real model served by Ollama on the host (the laptop),
+# instead of the deterministic mock. Add to any overlay:
+#   components: [../../components/ollama]
+#
+# Before deploying:  ollama pull qwen3:8b && ollama serve   (or run the Ollama app)
+# Ollama listens on 127.0.0.1:11434; Docker Desktop forwards host.docker.internal
+# to it, so the kind pods reach it without exposing it to the network.
+#
+# Qwen 3 8B with thinking off (reasoning_effort=none) leaked STAFF-40 and
+# followed the poisoned page 20/20 times each in testing (2026-11-06), ~4-5 s
+# per request on an M5 Pro. With thinking on it takes ~50 s. A real model is
+# not deterministic: rehearse, and keep the mock overlay as a fallback.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - target: {kind: Deployment, name: agent}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env
+        value:
+          - {name: ROLE, value: agent}
+          - {name: COMPONENT, value: agent}
+          - {name: DISPLAY_NAME, value: Agent}
+          - {name: MODEL_URL, value: "http://host.docker.internal:11434"}
+          - {name: MODEL_NAME, value: "qwen3:8b"}
+          - {name: MODEL_REASONING_EFFORT, value: "none"}
+          - {name: MODEL_DISPLAY, value: "Qwen 3 8B"}
+          - {name: TOOLS_URL, value: "http://slot-tools:8080"}
+          - {name: UPSTREAM_TIMEOUT, value: "180"}

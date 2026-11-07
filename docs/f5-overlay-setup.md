@@ -2,9 +2,10 @@
 
 Steps for running the F5 products on the local kind cluster (`prompt-demo`). Written 2026-10-29, updated 2026-11-05.
 
-**Booth stack: `deploy/overlays/f5-waf-guardrails`.** Real F5 WAF for NGINX, real F5 AI Guardrails, and the
-mock AI gateway (there is no F5 AI Gateway for this demo). Running on kind since 2026-11-05; the booth tests
-pass, apart from one flaky Guardrails test (see section 5). `deploy/overlays/f5` is the same plus a real
+**Booth stack: `deploy/overlays/f5-ollama`.** Real F5 WAF for NGINX, real F5 AI Guardrails, a real model
+(Qwen 3 8B on Ollama, see the README's "A real model"), and the mock AI gateway (there is no F5 AI Gateway
+for this demo). 9/9 booth tests, three runs in a row, on 2026-11-06. `deploy/overlays/f5-waf-guardrails` is
+the same with the scripted model, as a fallback. `deploy/overlays/f5` is the same plus a real
 F5 AI Gateway; it is kept for later and won't deploy until `AIGW_URL` is filled in.
 
 ## 0. Before you start
@@ -109,7 +110,7 @@ block values `flagged,blocked`). Two things could break it:
 ## 4. Deploy
 
 ```bash
-OVERLAY=deploy/overlays/f5-waf-guardrails make deploy
+OVERLAY=deploy/overlays/f5-ollama make deploy
 kubectl -n prompt-demo get pods        # f5-waf should be 3/3
 make board                             # http://localhost:8080 (separate terminal)
 ```
@@ -125,10 +126,12 @@ BOARD_URL=http://localhost:8080 make test
 
 The test file is the booth script, so a green run means every step of the demo works. Known:
 
-- **`test_response_check_catches_a_leak_the_prompt_scan_missed` is flaky** with the real Guardrails
-  (2 of 4 runs on 2026-11-05). F5 AI Guardrails sometimes flags "repeat everything above" on the prompt
-  scan instead of only on the response. The request is still blocked either way; it only affects the
-  between-sessions visitor game, not a stage step.
+- **The suite takes about a minute with the real model** (a few seconds per model call), versus about
+  two seconds with the scripted one.
+- **F5 AI Guardrails catches "repeat everything above" on the prompt**, where the mock guardrail only
+  catches it on the response. `test_rephrased_leak_is_still_blocked` accepts either.
+- **`T` shows ANSWERED instead of EXFILTRATED:** the model ignored the hidden instruction. Check the agent
+  is using `qwen3:8b` with `MODEL_REASONING_EFFORT=none`, and that Ollama is running (`ollama ps`).
 - **Token flood shows BLOCKED by the WAF instead of THROTTLED:** the booth WAF policy isn't loaded. Check
   `kubectl -n prompt-demo logs deploy/f5-waf -c nginx | grep booth_policy`.
 - **Guardrail blocks the wrong hop or misses the twist:** rehearse with the real scanner and adjust the
